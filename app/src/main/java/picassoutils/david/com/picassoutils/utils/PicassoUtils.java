@@ -10,6 +10,7 @@ import android.widget.ImageView;
 import android.widget.ListView;
 
 import com.squareup.picasso.Callback;
+import com.squareup.picasso.MemoryPolicy;
 import com.squareup.picasso.Picasso;
 import com.squareup.picasso.RequestCreator;
 
@@ -45,7 +46,6 @@ public class PicassoUtils {
     private Context mContext;
     private static volatile File mDirCacheFile;
 
-
     public static void initPicasso(@NonNull Context context) {
         if(mInstance == null) {
             synchronized (PicassoUtils.class) {
@@ -74,14 +74,7 @@ public class PicassoUtils {
         mInstance.invalidate(path);
     }
 
-    /**
-     * 返回uri对应的图片缓存所在的路径
-     * @return  图片绝对路径
-     */
-    public static String getCachePath(Context context) {
-        //后续跟上。
-        return context.getApplicationContext().getCacheDir() + File.separator + PICASSO_CACHE;
-    }
+
 
     /**
      * 获取缓存文件目录
@@ -173,6 +166,15 @@ public class PicassoUtils {
 
     public static void into(Context context, String uri, ImageView imageView, @DrawableRes int defaultResId, Callback callback) {
         into(context, mInstance.load(uri), imageView, defaultResId,callback);
+    }
+
+    /**
+     * 加载文件缓存图片
+     * @param context
+     * @param uri           图片uri
+     */
+    public static void intoCacheFile(Context context,String uri, ImageView imageView, @DrawableRes int defaultResId) {
+        into(context,mInstance.load(uri).memoryPolicy(MemoryPolicy.NO_CACHE, MemoryPolicy.NO_STORE),imageView, defaultResId, null);
     }
 
     private static void into(Context context, RequestCreator requestCreator, ImageView imageView, @DrawableRes int defaultResId, Callback callback) {
