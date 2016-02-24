@@ -74,7 +74,21 @@ public class PicassoUtils {
         mInstance.invalidate(path);
     }
 
+<<<<<<< 5bd553e84a3bd0a4c5a349eb744e3955c0178bd7
 
+=======
+    /**
+     * 返回uri对应的图片缓存所在的路径
+     * @return  图片绝对路径
+     */
+    public static String getCachePath(Context context, String uri) {
+
+        String dirCache = context.getApplicationContext().getCacheDir() + File.separator + PICASSO_CACHE;
+
+        //后续跟上。
+        return dirCache;
+    }
+>>>>>>> ls
 
     /**
      * 获取缓存文件目录
