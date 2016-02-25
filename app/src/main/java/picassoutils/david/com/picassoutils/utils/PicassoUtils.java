@@ -2,6 +2,8 @@ package picassoutils.david.com.picassoutils.utils;
 
 import android.content.Context;
 import android.graphics.Bitmap;
+import android.graphics.drawable.AnimationDrawable;
+import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.support.annotation.DrawableRes;
 import android.support.annotation.NonNull;
@@ -9,10 +11,12 @@ import android.widget.AbsListView;
 import android.widget.ImageView;
 import android.widget.ListView;
 
+import com.jakewharton.picasso.OkHttp3Downloader;
 import com.squareup.picasso.Callback;
 import com.squareup.picasso.MemoryPolicy;
 import com.squareup.picasso.Picasso;
 import com.squareup.picasso.RequestCreator;
+import com.squareup.picasso.Target;
 
 import java.io.File;
 import java.util.HashMap;
@@ -37,6 +41,9 @@ public class PicassoUtils {
 
     private static final int NO_RES_ID = 0;
 
+    private static final int MIN_DISK_CACHE_SIZE = 5 * 1024 * 1024; // 5MB
+
+    private static final int MAX_DISK_CACHE_SIZE = 50 * 1024 * 1024; // 50MB
     /**
      * 用于存储图片
      */
@@ -49,7 +56,7 @@ public class PicassoUtils {
     public static void initPicasso(@NonNull Context context) {
         if(mInstance == null) {
             synchronized (PicassoUtils.class) {
-                mInstance = Picasso.with(context);
+                mInstance = new Picasso.Builder(context).downloader(new OkHttp3Downloader(context)).build();
                 mDrawableMap = new HashMap<>();
             }
         }
@@ -73,22 +80,6 @@ public class PicassoUtils {
     public void clearItemCache(String path) {
         mInstance.invalidate(path);
     }
-
-<<<<<<< 5bd553e84a3bd0a4c5a349eb744e3955c0178bd7
-
-=======
-    /**
-     * 返回uri对应的图片缓存所在的路径
-     * @return  图片绝对路径
-     */
-    public static String getCachePath(Context context, String uri) {
-
-        String dirCache = context.getApplicationContext().getCacheDir() + File.separator + PICASSO_CACHE;
-
-        //后续跟上。
-        return dirCache;
-    }
->>>>>>> ls
 
     /**
      * 获取缓存文件目录
@@ -179,7 +170,7 @@ public class PicassoUtils {
     }
 
     public static void into(Context context, String uri, ImageView imageView, @DrawableRes int defaultResId, Callback callback) {
-        into(context, mInstance.load(uri), imageView, defaultResId,callback);
+        into(context, mInstance.load(uri), imageView, defaultResId, callback);
     }
 
     /**
@@ -188,11 +179,47 @@ public class PicassoUtils {
      * @param uri           图片uri
      */
     public static void intoCacheFile(Context context,String uri, ImageView imageView, @DrawableRes int defaultResId) {
-        into(context,mInstance.load(uri).memoryPolicy(MemoryPolicy.NO_CACHE, MemoryPolicy.NO_STORE),imageView, defaultResId, null);
+        into(context, mInstance.load(uri).memoryPolicy(MemoryPolicy.NO_CACHE, MemoryPolicy.NO_STORE), imageView, defaultResId, null);
     }
 
     private static void into(Context context, RequestCreator requestCreator, ImageView imageView, @DrawableRes int defaultResId, Callback callback) {
 
+        Drawable defaultResDrawble = getDefaultResDrawble(context, defaultResId);
+
+        //考虑到我们应用已经在Android version 4.0 以上 所以全部采用ARGB_8888,并没有解决3.0以下兼容565
+        requestCreator.config(Bitmap.Config.ARGB_8888).centerCrop().tag(context).placeholder(defaultResDrawble).fit().into(imageView, callback);
+    }
+
+    public static void setPauseOnScrollListener(Context context, final ListView listView, boolean pauseOnScroll, boolean pauseOnFingli) {
+        setPauseOnScrollListener(context, listView, pauseOnScroll, pauseOnFingli, null);
+    }
+
+    public static void intoAndStatis(Context context, String uri, final ImageView imageView, @DrawableRes int defaultResId) {
+        intoAndStatis(context, uri, imageView, defaultResId, null);
+    }
+
+    /**
+     * 下载图片且统计下载时功能
+     * @param context
+     * @param uri
+     * @param imageView
+     * @param defaultResId
+     * @param callback
+     */
+    public static void intoAndStatis(Context context, String uri, final ImageView imageView, @DrawableRes int defaultResId, Callback callback) {
+        final Drawable defaultResDrawble = getDefaultResDrawble(context, defaultResId);
+
+        RequestCreator requestCreator = mInstance.load(uri).config(Bitmap.Config.ARGB_8888).centerCrop().tag(context).placeholder(defaultResDrawble).fit();
+        requestCreator.into(new TujiaPicassoTarget(context, imageView), callback);
+    }
+
+    /**
+     * 获取默认图片
+     * @param context
+     * @param defaultResId
+     * @return
+     */
+    public static Drawable  getDefaultResDrawble(Context context, @DrawableRes int defaultResId) {
         Drawable defaultDrawble = mDrawableMap.get(defaultResId);
         if(defaultDrawble == null) {
             if(android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP){
@@ -202,18 +229,14 @@ public class PicassoUtils {
             }
             mDrawableMap.put(defaultResId, defaultDrawble);
         }
-        //考虑到我们应用已经在Android version 4.0 以上 所以全部采用ARGB_8888,并没有解决3.0以下兼容565
-        requestCreator.config(Bitmap.Config.ARGB_8888).centerCrop().tag(context).placeholder(defaultDrawble).fit().into(imageView, callback);
-    }
 
-    public static void setPauseOnScrollListener(Context context, final ListView listView, boolean pauseOnScroll, boolean pauseOnFingli) {
-        setPauseOnScrollListener(context, listView, pauseOnScroll, pauseOnFingli, null);
+        return defaultDrawble;
     }
 
     /**
      * 设置滑动状态停止加载图片
      * @param context
-     * @param listView              滑动列表
+     * @param listView              滑动列表,
      * @param pausuOnScroll         是否在滑动状态停止加载
      * @param pauseOnFingli         是否在快速滑动状态停止加载
      * @param customScrollListener  自定义Scroll监听事件
@@ -272,4 +295,88 @@ public class PicassoUtils {
         }
     }
 
+
+    /**
+     * 实现网络下载图片时间统计，自定义Target
+     */
+    static final class TujiaPicassoTarget implements Target {
+
+        public Context mContext;
+        public ImageView mTarget;
+        private Callback mCallback;
+
+        public TujiaPicassoTarget(Context context, ImageView target,Callback callback) {
+            this.mContext = context;
+            this.mTarget = target;
+            this.mCallback = callback;
+        }
+
+        @Override
+        public void onBitmapLoaded(Bitmap bitmap, Picasso.LoadedFrom from) {
+            setSuccessedDrawable(mContext, mTarget, bitmap);
+            if(mCallback != null) {
+                mCallback.onSuccess();
+            }
+        }
+
+        @Override
+        public void onBitmapFailed(Drawable errorDrawable) {
+            setErrorDrawable(mTarget, errorDrawable);
+            if(mCallback != null) {
+                mCallback.onError();
+            }
+        }
+
+        @Override
+        public void onPrepareLoad(Drawable placeHolderDrawable) {
+            setPlaceholder(mTarget, placeHolderDrawable);
+        }
+
+    }
+
+    /**
+     * 加载成功图
+     * @param context
+     * @param target
+     * @param result
+     */
+    public static void setSuccessedDrawable(Context context, ImageView target, Bitmap result) {
+        if(result == null) {
+            throw new AssertionError("解析错误， 没有结果");
+        }
+
+        Drawable placeholder = target.getDrawable();
+        if(placeholder instanceof AnimationDrawable) {
+            ((AnimationDrawable) placeholder).stop();
+        }
+        BitmapDrawable resultDrawable = new BitmapDrawable(context.getResources(), result);
+        target.setImageDrawable(resultDrawable);
+    }
+
+    /**
+     * 设置失败图片
+     * @param target
+     * @param errorDrawable
+     */
+    public static void setErrorDrawable(ImageView target, Drawable errorDrawable) {
+        Drawable placeholder = target.getDrawable();
+        if(placeholder instanceof AnimationDrawable) {
+            ((AnimationDrawable) placeholder).stop();
+        }
+        if(errorDrawable != null) {
+            target.setImageDrawable(errorDrawable);
+        }
+    }
+
+    /**
+     * 设置占位图
+     * @param target
+     * @param placeholderDrawable
+     */
+    public static void setPlaceholder(ImageView target, Drawable placeholderDrawable) {
+        target.setImageDrawable(placeholderDrawable);
+        if (target.getDrawable() instanceof AnimationDrawable) {
+            ((AnimationDrawable) target.getDrawable()).start();
+        }
+    }
 }
