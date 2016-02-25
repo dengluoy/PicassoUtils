@@ -7,6 +7,7 @@ import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.support.annotation.DrawableRes;
 import android.support.annotation.NonNull;
+import android.view.View;
 import android.widget.AbsListView;
 import android.widget.ImageView;
 import android.widget.ListView;
@@ -209,7 +210,10 @@ public class PicassoUtils {
     public static void intoAndStatis(Context context, String uri, final ImageView imageView, @DrawableRes int defaultResId, Callback callback) {
         final Drawable defaultResDrawble = getDefaultResDrawble(context, defaultResId);
 
-        RequestCreator requestCreator = mInstance.load(uri).config(Bitmap.Config.ARGB_8888).centerCrop().tag(context).placeholder(defaultResDrawble).fit();
+        int makeMeasureSpec = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.EXACTLY);
+        imageView.measure(makeMeasureSpec, makeMeasureSpec);
+
+        RequestCreator requestCreator = mInstance.load(uri).config(Bitmap.Config.ARGB_8888).centerCrop().resize(imageView.getMeasuredWidth(),imageView.getMeasuredHeight()).tag(context).placeholder(defaultResDrawble);
         requestCreator.into(new TujiaPicassoTarget(context, imageView, callback));
     }
 
@@ -331,7 +335,6 @@ public class PicassoUtils {
         public void onPrepareLoad(Drawable placeHolderDrawable) {
             setPlaceholder(mTarget, placeHolderDrawable);
         }
-
     }
 
     /**

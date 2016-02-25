@@ -57,7 +57,8 @@ public class SamplePicassoAdapter extends BaseAdapter {
             viewHolder = (ViewHolder) convertView.getTag();
         }
 
-        PicassoUtils.into(mContext, mDatas.get(position), viewHolder.img,R.mipmap.default_unit_big);
+//        PicassoUtils.into(mContext, mDatas.get(position), viewHolder.img,R.mipmap.default_unit_big);
+        PicassoUtils.intoAndStatis(mContext, mDatas.get(position), viewHolder.img, R.mipmap.default_unit_big);
 
         return convertView;
     }
