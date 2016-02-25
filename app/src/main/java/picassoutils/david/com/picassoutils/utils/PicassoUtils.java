@@ -210,7 +210,7 @@ public class PicassoUtils {
         final Drawable defaultResDrawble = getDefaultResDrawble(context, defaultResId);
 
         RequestCreator requestCreator = mInstance.load(uri).config(Bitmap.Config.ARGB_8888).centerCrop().tag(context).placeholder(defaultResDrawble).fit();
-        requestCreator.into(new TujiaPicassoTarget(context, imageView), callback);
+        requestCreator.into(new TujiaPicassoTarget(context, imageView, callback));
     }
 
     /**
@@ -301,11 +301,11 @@ public class PicassoUtils {
      */
     static final class TujiaPicassoTarget implements Target {
 
-        public Context mContext;
-        public ImageView mTarget;
-        private Callback mCallback;
+        public final Context mContext;
+        public final ImageView mTarget;
+        private final Callback mCallback;
 
-        public TujiaPicassoTarget(Context context, ImageView target,Callback callback) {
+        public TujiaPicassoTarget(Context context, ImageView target, Callback callback) {
             this.mContext = context;
             this.mTarget = target;
             this.mCallback = callback;
