@@ -4,6 +4,8 @@ import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.widget.ListView;
 
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.List;
 
@@ -24,7 +26,9 @@ public class MainActivity extends AppCompatActivity {
         SamplePicassoAdapter adapter = new SamplePicassoAdapter(this,datas);
         mListView.setAdapter(adapter);
 
-        PicassoUtils.setPauseOnScrollListener(this, mListView,true,true);
+        PicassoUtils.setPauseOnScrollListener(this, mListView, true, true);
+
+
     }
 
 }

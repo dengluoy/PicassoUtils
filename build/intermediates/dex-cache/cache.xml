@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<items version="2" >
+
+    <item
+        jar="F:\github_open_source\PicassoUtils\app\build\intermediates\exploded-aar\PicassoUtils\picasso\unspecified\jars\classes.jar"
+        jumboMode="false"
+        revision="23.0.2"
+        sha1="e305e80d5f3fb0341a674652d348d9e84598242a">
+        <dex dex="F:\github_open_source\PicassoUtils\app\build\intermediates\pre-dexed\debug\PicassoUtils-picasso-unspecified_759caf3f11e7b1447d5da51f174433c210fa86ea.jar" />
+    </item>
+
+</items>

@@ -50,15 +50,14 @@ public class SamplePicassoAdapter extends BaseAdapter {
 
         if(convertView == null) {
             viewHolder = new ViewHolder();
-            convertView = mLayoutinflater.inflate(R.layout.item_image_layout,null);
+            convertView = mLayoutinflater.inflate(R.layout.item_image_layout,parent,false);
             viewHolder.img = (ImageView) convertView.findViewById(R.id.content_item_image);
             convertView.setTag(viewHolder);
         } else {
             viewHolder = (ViewHolder) convertView.getTag();
         }
 
-//        PicassoUtils.into(mContext, mDatas.get(position), viewHolder.img,R.mipmap.default_unit_big);
-        PicassoUtils.intoAndStatis(mContext, mDatas.get(position), viewHolder.img, R.mipmap.default_unit_big);
+        PicassoUtils.into(mContext, mDatas.get(position), viewHolder.img,R.mipmap.default_unit_big);
 
         return convertView;
     }

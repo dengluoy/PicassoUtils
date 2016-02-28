@@ -2,24 +2,22 @@ package picassoutils.david.com.picassoutils.utils;
 
 import android.content.Context;
 import android.graphics.Bitmap;
-import android.graphics.drawable.AnimationDrawable;
-import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.support.annotation.DrawableRes;
 import android.support.annotation.NonNull;
-import android.view.View;
+import android.util.Log;
 import android.widget.AbsListView;
 import android.widget.ImageView;
 import android.widget.ListView;
 
-import com.jakewharton.picasso.OkHttp3Downloader;
 import com.squareup.picasso.Callback;
 import com.squareup.picasso.MemoryPolicy;
 import com.squareup.picasso.Picasso;
+import com.squareup.picasso.PicassoNetworkListener;
 import com.squareup.picasso.RequestCreator;
-import com.squareup.picasso.Target;
 
 import java.io.File;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -50,6 +48,10 @@ public class PicassoUtils {
      */
     private static Map<Integer, Drawable> mDrawableMap;
 
+    /** 记录图片请求开始时间，用于计算图片请求响应耗时
+     *  由于图片框架使用多线程，此处需要同步操作
+     */
+    private static Map<String, Long> mStartTimeMap = Collections.synchronizedMap(new HashMap<String, Long>());
     private static volatile Picasso mInstance;
     private Context mContext;
     private static volatile File mDirCacheFile;
@@ -57,7 +59,7 @@ public class PicassoUtils {
     public static void initPicasso(@NonNull Context context) {
         if(mInstance == null) {
             synchronized (PicassoUtils.class) {
-                mInstance = new Picasso.Builder(context).downloader(new OkHttp3Downloader(context)).build();
+                mInstance = Picasso.with(context).networkListener(mNetworkListener);
                 mDrawableMap = new HashMap<>();
             }
         }
@@ -167,7 +169,7 @@ public class PicassoUtils {
 
         if(isNinePatchResId(defaultResId)) imageView.setScaleType(ImageView.ScaleType.FIT_XY);
 
-        into(context, mInstance.load(uri), imageView,defaultResId, null);
+        into(context, mInstance.load(uri), imageView, defaultResId, null);
     }
 
     public static void into(Context context, String uri, ImageView imageView, @DrawableRes int defaultResId, Callback callback) {
@@ -193,28 +195,6 @@ public class PicassoUtils {
 
     public static void setPauseOnScrollListener(Context context, final ListView listView, boolean pauseOnScroll, boolean pauseOnFingli) {
         setPauseOnScrollListener(context, listView, pauseOnScroll, pauseOnFingli, null);
-    }
-
-    public static void intoAndStatis(Context context, String uri, final ImageView imageView, @DrawableRes int defaultResId) {
-        intoAndStatis(context, uri, imageView, defaultResId, null);
-    }
-
-    /**
-     * 下载图片且统计下载时功能
-     * @param context
-     * @param uri
-     * @param imageView
-     * @param defaultResId
-     * @param callback
-     */
-    public static void intoAndStatis(Context context, String uri, final ImageView imageView, @DrawableRes int defaultResId, Callback callback) {
-        final Drawable defaultResDrawble = getDefaultResDrawble(context, defaultResId);
-
-        int makeMeasureSpec = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.EXACTLY);
-        imageView.measure(makeMeasureSpec, makeMeasureSpec);
-
-        RequestCreator requestCreator = mInstance.load(uri).config(Bitmap.Config.ARGB_8888).centerCrop().resize(imageView.getMeasuredWidth(),imageView.getMeasuredHeight()).tag(context).placeholder(defaultResDrawble);
-        requestCreator.into(new TujiaPicassoTarget(context, imageView, callback));
     }
 
     /**
@@ -299,87 +279,49 @@ public class PicassoUtils {
         }
     }
 
-
-    /**
-     * 实现网络下载图片时间统计，自定义Target
-     */
-    static final class TujiaPicassoTarget implements Target {
-
-        public final Context mContext;
-        public final ImageView mTarget;
-        private final Callback mCallback;
-
-        public TujiaPicassoTarget(Context context, ImageView target, Callback callback) {
-            this.mContext = context;
-            this.mTarget = target;
-            this.mCallback = callback;
-        }
-
+    static PicassoNetworkListener mNetworkListener = new PicassoNetworkListener() {
         @Override
-        public void onBitmapLoaded(Bitmap bitmap, Picasso.LoadedFrom from) {
-            setSuccessedDrawable(mContext, mTarget, bitmap);
-            if(mCallback != null) {
-                mCallback.onSuccess();
+        public void onNetworkResponseSucceed(String uri, long time, long imageSize) {
+            Long startTime = mStartTimeMap.get(uri);
+            startTime = startTime != null ? 0 : startTime;
+            if(startTime > 0) {
+                long timeInterval = time - startTime;
+                mStartTimeMap.remove(uri);
+                Log.d("PicassNetworkListener", "onNetworkResponseSucceed:  uri : " + uri + ", time : " + time + ", imageSize : " + imageSize + ", timeInterval: " + timeInterval);
             }
+
+
         }
 
         @Override
-        public void onBitmapFailed(Drawable errorDrawable) {
-            setErrorDrawable(mTarget, errorDrawable);
-            if(mCallback != null) {
-                mCallback.onError();
+        public void onNetworkLoadFinish(String uri, long time, long imageSize) {
+            Long startTime = mStartTimeMap.get(uri);
+            if(startTime > 0) {
+                long timeInterval = time - startTime;
+                mStartTimeMap.remove(uri);
+                Log.d("PicassNetworkListener", "onNetworkLoadFinish:  uri : " + uri + ", time : " + time + ", imageSize : " + imageSize + ", timeInterval:" + timeInterval );
             }
+
+
         }
 
         @Override
-        public void onPrepareLoad(Drawable placeHolderDrawable) {
-            setPlaceholder(mTarget, placeHolderDrawable);
-        }
-    }
-
-    /**
-     * 加载成功图
-     * @param context
-     * @param target
-     * @param result
-     */
-    public static void setSuccessedDrawable(Context context, ImageView target, Bitmap result) {
-        if(result == null) {
-            throw new AssertionError("解析错误， 没有结果");
+        public void onNetworkLoadStart(String uri, long time) {
+            mStartTimeMap.put(uri,time);
+            Log.d("PicassNetworkListener", "onNetworkLoadStart:  uri : " + uri + ", time : " + time);
         }
 
-        Drawable placeholder = target.getDrawable();
-        if(placeholder instanceof AnimationDrawable) {
-            ((AnimationDrawable) placeholder).stop();
-        }
-        BitmapDrawable resultDrawable = new BitmapDrawable(context.getResources(), result);
-        target.setImageDrawable(resultDrawable);
-    }
+        @Override
+        public void onNetworkLoadFail(String uri, long time, Throwable e, int errorCode) {
+            Long startTime = mStartTimeMap.get(uri);
+            startTime = startTime == null ? 0 : mStartTimeMap.get(uri);
+            if(startTime > 0) {
+                long timeInterval = time - startTime;
+                mStartTimeMap.remove(uri);
+                Log.d("PicassNetworkListener", "onNetworkLoadFail:  uri : " + uri + ", exception : " + e + ", errorCode : " + errorCode + ", timeInterval: " + timeInterval);
+            }
 
-    /**
-     * 设置失败图片
-     * @param target
-     * @param errorDrawable
-     */
-    public static void setErrorDrawable(ImageView target, Drawable errorDrawable) {
-        Drawable placeholder = target.getDrawable();
-        if(placeholder instanceof AnimationDrawable) {
-            ((AnimationDrawable) placeholder).stop();
-        }
-        if(errorDrawable != null) {
-            target.setImageDrawable(errorDrawable);
-        }
-    }
 
-    /**
-     * 设置占位图
-     * @param target
-     * @param placeholderDrawable
-     */
-    public static void setPlaceholder(ImageView target, Drawable placeholderDrawable) {
-        target.setImageDrawable(placeholderDrawable);
-        if (target.getDrawable() instanceof AnimationDrawable) {
-            ((AnimationDrawable) target.getDrawable()).start();
         }
-    }
+    };
 }
